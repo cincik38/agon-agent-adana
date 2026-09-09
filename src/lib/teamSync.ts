@@ -13,10 +13,10 @@ export const TEAM_ON_KEY = 'uyu-team-enabled';
 export const TEAM_META_KEY = 'uyu-team-meta';
 export const TEAM_HOTEL_ID = 'uyu-room-main';
 
-/** Ortak proje — tum personel ayni DB */
-export const BUILTIN_SUPABASE_URL = 'https://yhlfesjjzwmydulixckf.supabase.co';
+/** Ortak proje — tum personel ayni DB (ADANA OTEL) */
+export const BUILTIN_SUPABASE_URL = 'https://vqqpijvpujhpjnmtktgb.supabase.co';
 export const BUILTIN_SUPABASE_ANON =
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlobGZlc2pqendteWR1bGl4Y2tmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU4NDk0ODcsImV4cCI6MjEwMTQyNTQ4N30.jvHSq5S99y7U5U6L4bWM7q-VaYxATmHKmgBjlJTUsTs';
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZxcXBpanZwdWpocGpubXRrdGdiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg5NzA3MDYsImV4cCI6MjEwNDU0NjcwNn0.yxy7MrIIPhMTzF5uKY-gO4hoDaXt2Gz_z0BhcQZ58cM';
 
 export interface TeamMeta {
   status: 'off' | 'idle' | 'syncing' | 'ok' | 'error';
