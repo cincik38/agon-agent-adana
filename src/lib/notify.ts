@@ -7,7 +7,7 @@ export function sendTelegramNotify(text: string) {
     fetch('/api/notify', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text }),
+      body: JSON.stringify({ text: `🏨 <b>Adana</b>\n${text}` }),
     }).catch(() => {
       /* sessizce yut — bildirim basarisiz olsa da uygulama akisi bozulmasin */
     });
