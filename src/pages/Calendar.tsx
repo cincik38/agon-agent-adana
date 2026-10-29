@@ -14,6 +14,8 @@ import {
   CalendarRange,
 } from 'lucide-react';
 import { useStore } from '../lib/store';
+import WebAssignModal from '../components/WebAssignModal';
+import { useWebInbox, type WebReservation } from '../lib/webInbox';
 import type {
   AppState,
   HousekeepingStatus,
@@ -106,6 +108,9 @@ export default function CalendarPage() {
   const [draggedResId, setDraggedResId] = useState<string | null>(null);
   const [dragOverRoomId, setDragOverRoomId] = useState<string | null>(null);
   const [ghostOpen, setGhostOpen] = useState(false);
+  const { items: webItems, reload: reloadWeb } = useWebInbox();
+  const [webAssign, setWebAssign] = useState<{ item: WebReservation; roomId?: string } | null>(null);
+  const [draggedWebId, setDraggedWebId] = useState<string | null>(null);
 
   const [view, setView] = useState<ViewMode>('14');
   const [anchor, setAnchor] = useState(todayISO());
@@ -292,6 +297,29 @@ export default function CalendarPage() {
     [checkInH, checkOutH, dates, isHourly, toX, unitPx]
   );
 
+  /** Odası atanmamış web rezervasyonları: görünür tarih aralığında, çakışanlar alt alta */
+  const webBars = useMemo(() => {
+    const laneEnds: number[] = [];
+    const out: { item: WebReservation; left: number; width: number; lane: number }[] = [];
+    [...webItems]
+      .filter((w) => !isHourly ? w.check_in < rangeEndExcl && w.check_out >= rangeStart : w.check_in <= dates[0] && w.check_out >= dates[0])
+      .sort((a, b) => a.check_in.localeCompare(b.check_in))
+      .forEach((w) => {
+        const lay = barLayout({ checkIn: w.check_in, checkOut: w.check_out } as Reservation);
+        if (!lay) return;
+        let lane = laneEnds.findIndex((end) => end <= lay.left);
+        if (lane === -1) {
+          lane = laneEnds.length;
+          laneEnds.push(0);
+        }
+        laneEnds[lane] = lay.left + lay.width;
+        out.push({ item: w, left: lay.left, width: lay.width, lane });
+      });
+    return out;
+  }, [webItems, barLayout, isHourly, rangeStart, rangeEndExcl, dates]);
+  const webLaneCount = Math.max(1, ...webBars.map((b) => b.lane + 1));
+  const webLaneH = compact ? 24 : 34;
+
   const nowLine = useMemo(() => {
     const t = todayISO();
     const h = now.getHours() + now.getMinutes() / 60 + now.getSeconds() / 3600;
@@ -470,6 +498,12 @@ export default function CalendarPage() {
   // sadece oda degisir. Eski oda kirliye alinsin mi diye sorulur.
   const handleRoomDrop = (targetRoom: Room) => {
     setDragOverRoomId(null);
+    if (draggedWebId) {
+      const w = webItems.find((x) => x.id === draggedWebId);
+      setDraggedWebId(null);
+      if (w) setWebAssign({ item: w, roomId: targetRoom.id });
+      return;
+    }
     const resId = draggedResId;
     setDraggedResId(null);
     if (!resId) return;
@@ -1147,6 +1181,57 @@ export default function CalendarPage() {
               </div>
             </div>
 
+            {/* Odası atanmamış web rezervasyonları */}
+            {webItems.length > 0 && (
+              <div
+                className="relative flex border-b-2 border-amber-300 bg-amber-50/70"
+                style={{ height: webLaneCount * webLaneH + 8 }}
+              >
+                <div
+                  className="sticky left-0 z-20 flex shrink-0 flex-col justify-center border-r border-amber-200 bg-amber-50 px-2"
+                  style={{ width: labelW }}
+                >
+                  <p className="truncate text-[11px] font-bold text-amber-900">Odasız</p>
+                  <p className="truncate text-[10px] text-amber-700">{webItems.length} web rezervasyonu</p>
+                </div>
+                <div className="relative" style={{ width: gridWidth }}>
+                  {webBars.length === 0 && (
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[11px] text-amber-700/80">
+                      Bu tarih aralığında odasız rezervasyon yok
+                    </span>
+                  )}
+                  {webBars.map((b) => {
+                    const hotelName = b.item.guest_name;
+                    return (
+                      <button
+                        key={b.item.id}
+                        type="button"
+                        draggable
+                        onDragStart={(e) => {
+                          setDraggedWebId(b.item.id);
+                          e.dataTransfer.effectAllowed = 'move';
+                          e.dataTransfer.setData('text/plain', b.item.id);
+                        }}
+                        onDragEnd={() => {
+                          setDraggedWebId(null);
+                          setDragOverRoomId(null);
+                        }}
+                        onClick={() => setWebAssign({ item: b.item })}
+                        title={`${b.item.code} · ${hotelName} — oda atamak için tıkla veya bir odaya sürükle`}
+                        className="absolute z-10 flex items-center gap-1 overflow-hidden rounded-lg border border-dashed border-amber-500 bg-amber-200 px-2 text-left text-amber-950 shadow-sm transition hover:bg-amber-300 cursor-grab active:cursor-grabbing"
+                        style={{ left: b.left, width: b.width, top: 4 + b.lane * webLaneH, height: webLaneH - 4 }}
+                      >
+                        <span className="truncate text-[11px] font-semibold leading-tight">{hotelName}</span>
+                        {b.width > 110 && (
+                          <span className="truncate text-[9px] opacity-80">{b.item.room_name || 'Oda?'}</span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             {/* Body */}
             <div className="relative" style={{ height: bodyHeight }}>
               {rooms.length === 0 && (
@@ -1164,7 +1249,7 @@ export default function CalendarPage() {
                   <div
                     key={room.id}
                     onDragOver={(e) => {
-                      if (!draggedResId || blocked) return;
+                      if ((!draggedResId && !draggedWebId) || blocked) return;
                       e.preventDefault();
                       setDragOverRoomId(room.id);
                     }}
@@ -1356,6 +1441,7 @@ export default function CalendarPage() {
           <Legend swatch="bg-gradient-to-r from-amber-400 to-amber-500" label="Beklemede" />
           <Legend swatch="bg-gradient-to-r from-teal-400 to-teal-600" label="Onaylı" />
           <Legend swatch="bg-gradient-to-r from-blue-500 to-indigo-600" label="Check-in" />
+          <Legend swatch="bg-amber-200" label="Odasız (web)" />
           <Legend swatch="bg-slate-300" label="Kapalı / Bakım" />
           <Legend swatch="bg-rose-500" label="Şimdi (canlı)" />
           <span className="text-[11px] text-slate-400">
@@ -1363,6 +1449,13 @@ export default function CalendarPage() {
           </span>
         </div>
       </Card>
+
+      <WebAssignModal
+        item={webAssign?.item ?? null}
+        initialRoomId={webAssign?.roomId}
+        onClose={() => setWebAssign(null)}
+        onDone={() => void reloadWeb()}
+      />
 
       {hoverTip && !selected && (
         <div

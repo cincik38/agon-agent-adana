@@ -20,7 +20,6 @@ import Maintenance from './pages/Maintenance';
 import MenuManagement from './pages/MenuManagement';
 import CafeOrders from './pages/CafeOrders';
 import PublicOrder from './pages/PublicOrder';
-import WebReservations from './pages/WebReservations';
 
 function ProtectedApp() {
   const { isAuthenticated, ready } = useStore();
@@ -48,7 +47,6 @@ function ProtectedApp() {
           <Route index element={<Dashboard />} />
           <Route path="rooms" element={<Rooms />} />
           <Route path="reservations" element={<Reservations />} />
-          <Route path="web" element={<WebReservations />} />
           <Route path="calendar" element={<CalendarPage />} />
           <Route path="guests" element={<Guests />} />
           <Route path="front-desk" element={<FrontDesk />} />

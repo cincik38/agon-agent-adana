@@ -75,3 +75,26 @@ export function useWebInboxCount(intervalMs = 30000): number {
   }, [load, intervalMs]);
   return count;
 }
+
+/** Oda bekleyen (status = new) web rezervasyonları — 30 sn'de bir ve odaklanınca yenilenir. */
+export function useWebInbox(intervalMs = 30000): { items: WebReservation[]; reload: () => Promise<void> } {
+  const [items, setItems] = useState<WebReservation[]>([]);
+  const reload = useCallback(async () => {
+    try {
+      setItems(await fetchWebReservations('new'));
+    } catch {
+      /* bağlantı yoksa mevcut liste kalsın */
+    }
+  }, []);
+  useEffect(() => {
+    void reload();
+    const t = setInterval(() => void reload(), intervalMs);
+    const onFocus = () => void reload();
+    window.addEventListener('focus', onFocus);
+    return () => {
+      clearInterval(t);
+      window.removeEventListener('focus', onFocus);
+    };
+  }, [reload, intervalMs]);
+  return { items, reload };
+}

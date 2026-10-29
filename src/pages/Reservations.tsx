@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Plus, Search, Download, Eye, Pencil, Trash2, XCircle, MessageCircle, RotateCcw } from 'lucide-react';
 import { useStore } from '../lib/store';
+import WebAssignModal from '../components/WebAssignModal';
+import { useWebInbox, type WebReservation } from '../lib/webInbox';
 import type { Reservation, ReservationStatus } from '../lib/types';
 import {
   Badge,
@@ -63,6 +65,8 @@ export default function Reservations() {
   } = useStore();
 
   const [q, setQ] = useState('');
+  const { items: webItems, reload: reloadWeb } = useWebInbox();
+  const [webAssign, setWebAssign] = useState<WebReservation | null>(null);
   const [statusFilter, setStatusFilter] = useState('all');
   const [open, setOpen] = useState(false);
   const [detail, setDetail] = useState<Reservation | null>(null);
@@ -404,6 +408,43 @@ export default function Reservations() {
         </div>
       </Card>
 
+      {webItems.length > 0 && (
+        <Card className="mb-4 overflow-hidden border-amber-300">
+          <div className="flex items-center justify-between border-b border-amber-200 bg-amber-50 px-4 py-3">
+            <p className="text-sm font-semibold text-amber-900">
+              Oda atanmamış web rezervasyonları ({webItems.length})
+            </p>
+            <p className="hidden text-xs text-amber-700 sm:block">uyuroom.com üzerinden geldi — oda atayınca normal rezervasyona dönüşür</p>
+          </div>
+          <div className="divide-y divide-amber-100">
+            {webItems.map((w) => (
+              <div key={w.id} className="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="space-y-0.5 text-sm">
+                  <p className="font-semibold text-slate-900">
+                    {w.guest_name} <Badge color="amber">{w.code}</Badge>
+                  </p>
+                  <p className="text-slate-600">
+                    {formatDate(w.check_in)} → {formatDate(w.check_out)}
+                    {w.nights ? ` · ${w.nights} gece` : ''} · {w.adults ?? 1} yetişkin{w.children ? `, ${w.children} çocuk` : ''}
+                    {w.room_name ? ` · ${w.room_name}` : ''}
+                    {w.total_price != null ? ` · ${formatCurrency(w.total_price)}` : ''}
+                  </p>
+                  {(w.guest_phone || w.special_requests) && (
+                    <p className="text-xs text-slate-500">
+                      {w.guest_phone}
+                      {w.special_requests ? ` · Özel istek: ${w.special_requests}` : ''}
+                    </p>
+                  )}
+                </div>
+                <Button size="sm" onClick={() => setWebAssign(w)}>
+                  Oda ata
+                </Button>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
+
       <Card className="overflow-hidden">
         {list.length === 0 ? (
           <EmptyState title="Rezervasyon yok" desc="Yeni rezervasyon oluşturun." />
@@ -499,6 +540,12 @@ export default function Reservations() {
           </div>
         )}
       </Card>
+
+      <WebAssignModal
+        item={webAssign}
+        onClose={() => setWebAssign(null)}
+        onDone={() => void reloadWeb()}
+      />
 
       <Modal open={open} onClose={() => setOpen(false)} title="Yeni Rezervasyon" wide>
         <div className="space-y-4">
