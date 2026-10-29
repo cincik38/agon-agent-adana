@@ -29,6 +29,7 @@ import {
   History,
   Coffee,
   ShoppingBag,
+  Globe,
 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useStore } from '../lib/store';
@@ -36,11 +37,13 @@ import { balanceDue } from '../lib/calculations';
 import { cn, formatCurrency, formatDateTime, todayISO } from '../lib/utils';
 import { AnimatePresence, motion } from 'framer-motion';
 import ChatWidget from './ChatWidget';
+import { useWebInboxCount } from '../lib/webInbox';
 
 const nav = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/rooms', label: 'Odalar', icon: BedDouble },
   { to: '/reservations', label: 'Rezervasyonlar', icon: CalendarDays },
+  { to: '/web', label: 'Web Rezervasyonları', icon: Globe },
   { to: '/calendar', label: 'Takvim / Doluluk', icon: ClipboardList },
   { to: '/guests', label: 'Misafirler', icon: Users },
   { to: '/front-desk', label: 'Resepsiyon', icon: Hotel },
@@ -76,6 +79,7 @@ export default function Layout() {
   const navItems = isManager ? [...nav, ...managerOnlyNav] : nav;
   const location = useLocation();
   const navigate = useNavigate();
+  const webCount = useWebInboxCount();
 
   useEffect(() => {
     reportPage(location.pathname);
@@ -494,6 +498,9 @@ export default function Layout() {
             >
               <item.icon size={18} />
               {item.label}
+              {item.to === '/web' && webCount > 0 && (
+                <span className="ml-auto rounded-full bg-amber-400 px-2 py-0.5 text-[11px] font-bold text-slate-900">{webCount}</span>
+              )}
             </NavLink>
           ))}
         </nav>
@@ -557,6 +564,9 @@ export default function Layout() {
                 >
                   <item.icon size={18} />
                   {item.label}
+                  {item.to === '/web' && webCount > 0 && (
+                    <span className="ml-auto rounded-full bg-amber-400 px-2 py-0.5 text-[11px] font-bold text-slate-900">{webCount}</span>
+                  )}
                 </NavLink>
               ))}
             </nav>
